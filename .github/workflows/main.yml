@@ -1,0 +1,44 @@
+name: Run PHP Scraper
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.0' # Specify the PHP version you need
+
+    - name: Run scraper.php
+      run: php scraper.php -mode slow
+
+    - name: Update file timestamps and move to new repo
+      run: |
+        NEW_REPO="new-repo"
+        mkdir $NEW_REPO
+        DATE=$(date +%Y%m%d_%H%M%S)
+        for FILE in $(git ls-files --modified --others --exclude-standard); do
+          cp $FILE $NEW_REPO/"$(basename $FILE)-$DATE"
+        done
+        
+        cd $NEW_REPO
+        git init
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add .
+        git commit -m "Add updated files with timestamp"
+        git remote add origin https://github.com/YOUR_USERNAME/YOUR_NEW_REPO.git
+        git push -u origin main --force # Using --force to ensure it overwrites existing repo
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
